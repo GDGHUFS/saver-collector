@@ -10,7 +10,11 @@
 ├── LICENSE
 ├── requirements.txt
 └── rss/
+    ├── README.md
+    ├── config.py
     ├── main.py
+    ├── parser.py
+    ├── repository.py
     ├── table.sql
     ├── hackernews.rss
     ├── 교수신문.xml
@@ -59,7 +63,11 @@ python main.py
 
 `rss/`는 RSS 2.0 피드를 읽어 정제한 뒤 PostgreSQL에 저장하는 작업 단위다.
 
+* `rss/README.md`: RSS 수집기 구조, 환경 변수, 실행 방법 설명.
 * `rss/main.py`: RSS 수집기의 진입점.
+* `rss/config.py`: 환경 변수, 공급자 목록, 경로 설정.
+* `rss/parser.py`: RSS XML을 내부 데이터 모델로 정규화하는 파서.
+* `rss/repository.py`: PostgreSQL 스키마 적용과 upsert 저장 로직.
 * `rss/table.sql`: `news_feeds`, `news_feed_categories`, `news_items`, `news_item_categories` 테이블과 인덱스 정의.
 * `rss/교수신문.xml`: 교수신문 샘플 RSS. 원본 주소는 파일 주석의 `https://www.kyosu.net/rss/allArticle.xml`.
 * `rss/전자신문.xml`: 전자신문 샘플 RSS. 원본 주소는 파일 주석의 `http://rss.etnews.com/Section901.xml`.
@@ -70,6 +78,7 @@ python main.py
 RSS 구현 시 지켜야 할 사항:
 
 * 채널 메타데이터는 `news_feeds`에 저장하고, 기사 항목은 `news_items`에 저장한다.
+* 기사 항목의 `title`과 `link`는 필수다. 누락되거나 빈 값이면 저장하지 않는다.
 * 카테고리는 피드와 아이템을 구분해 각각 `news_feed_categories`, `news_item_categories`에 저장한다.
 * `guid`가 있으면 `(feed_id, guid)`, `guid`가 없으면 `(feed_id, link)` 기준으로 중복 저장을 방지한다.
 * 날짜는 가능한 한 timezone-aware 값으로 파싱해 `TIMESTAMPTZ`에 저장한다.

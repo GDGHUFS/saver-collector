@@ -23,18 +23,18 @@ CREATE TABLE IF NOT EXISTS news_feeds (
     extensions JSONB NOT NULL DEFAULT '{}'::JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
+);
 CREATE TABLE IF NOT EXISTS news_feed_categories (
     id BIGSERIAL PRIMARY KEY,
     feed_id BIGINT NOT NULL REFERENCES news_feeds(id) ON DELETE CASCADE,
     name TEXT NOT NULL CHECK (length(btrim(name)) > 0),
     domain TEXT
-)
+);
 CREATE TABLE IF NOT EXISTS news_items (
     id BIGSERIAL PRIMARY KEY,
     feed_id BIGINT NOT NULL REFERENCES news_feeds(id) ON DELETE CASCADE,
-    title TEXT,
-    link TEXT,
+    title TEXT NOT NULL,
+    link TEXT NOT NULL,
     description TEXT,
     author TEXT,
     comments TEXT,
@@ -51,17 +51,15 @@ CREATE TABLE IF NOT EXISTS news_items (
     extensions JSONB NOT NULL DEFAULT '{}'::JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CHECK (
-        (title IS NOT NULL AND length(btrim(title)) > 0)
-        OR (description IS NOT NULL AND length(btrim(description)) > 0)
-    )
-)
+    CHECK (length(btrim(title)) > 0),
+    CHECK (length(btrim(link)) > 0)
+);
 CREATE TABLE IF NOT EXISTS news_item_categories (
     id BIGSERIAL PRIMARY KEY,
     item_id BIGINT NOT NULL REFERENCES news_items(id) ON DELETE CASCADE,
     name TEXT NOT NULL CHECK (length(btrim(name)) > 0),
     domain TEXT
-)
+);
 CREATE INDEX IF NOT EXISTS news_items_latest_idx
     ON news_items (pub_date DESC NULLS LAST, id DESC);
 CREATE INDEX IF NOT EXISTS news_feeds_publisher_idx
@@ -71,4 +69,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS news_items_feed_guid_idx
     WHERE guid IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS news_items_feed_link_idx
     ON news_items (feed_id, link)
-    WHERE guid IS NULL AND link IS NOT NULL
+    WHERE guid IS NULL AND link IS NOT NULL;
