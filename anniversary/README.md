@@ -11,7 +11,10 @@
 
 ## 구성
 
-* `main.py`: 현재 API 키 로드와 `getHoliDeInfo` 호출 예시를 포함한 진입점.
+* `main.py`: 명령행 진입점. 연도, 월, 오퍼레이션을 선택해 API를 호출하고 DB에 저장한다.
+* `config.py`: `.env`와 환경 변수에서 DB 접속 정보, API 키, timeout, 요청 설정을 읽는다.
+* `parser.py`: API JSON 응답을 달력 도메인 모델로 정규화한다.
+* `repository.py`: `asyncpg`로 PostgreSQL 스키마 적용과 특일 upsert를 수행한다.
 * `table.sql`: 달력 UI에 필요한 특일 항목 저장 테이블 정의.
 * `OpenAPI활용가이드_한국천문연구원_천문우주정보__특일_정보제공_서비스_v1.4.pdf`: 공공데이터포털 OpenAPI 활용가이드 원본.
 
@@ -27,6 +30,11 @@ POSTGRES_PORT=5432
 POSTGRES_USER=saver
 POSTGRES_PASSWORD=saver
 POSTGRES_DB=saverdb
+POSTGRES_CONNECT_TIMEOUT=10
+
+ANNIVERSARY_HTTP_TIMEOUT=10
+ANNIVERSARY_USER_AGENT=SAVER-Collector/1.0
+ANNIVERSARY_NUM_OF_ROWS=100
 ```
 
 공공데이터포털 서비스키가 이미 URL 인코딩된 값이면 HTTP 클라이언트의 자동 인코딩으로 이중 인코딩되지 않도록 호출 방식을 확인한다.
@@ -47,6 +55,7 @@ http://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService
 | `solYear` | 예 | 조회 연도. 예: `2026` |
 | `solMonth` | 아니오 | 조회 월. 2자리 문자열 권장. 예: `06` |
 | `_type` | 아니오 | `json`을 지정하면 JSON 응답을 받는다. 기본값은 XML이다. |
+| `pageNo` | 아니오 | 조회 페이지 번호. 수집기는 `totalCount`를 기준으로 필요한 페이지를 반복 호출한다. |
 | `numOfRows` | 아니오 | 페이지당 결과 수. 기본값은 10이다. 월 또는 연 단위 전체 수집 시 충분히 큰 값을 지정하거나 `totalCount`를 기준으로 페이지를 반복한다. |
 
 지원 오퍼레이션은 다음과 같다.
@@ -183,19 +192,25 @@ pip install -r requirements.txt
 현재 예시 진입점은 다음처럼 실행한다.
 
 ```bash
-python anniversary/main.py
+python anniversary/main.py --apply-schema --year 2026 --month 06
 ```
 
-DB 저장 구현을 추가한 뒤에는 `anniversary/table.sql`을 먼저 적용하고, 수집 코드의 upsert 조건이 `anniversary_special_days_unique_key`와 일치하는지 확인한다.
+오퍼레이션 하나만 검증할 때는 다음처럼 지정한다.
+
+```bash
+python anniversary/main.py --year 2026 --month 06 --operation getHoliDeInfo
+```
+
+`--month`와 `--operation`은 여러 번 지정할 수 있다. `--month`를 생략하면 1월부터 12월까지 수집하고, `--operation`을 생략하면 전체 오퍼레이션을 수집한다.
 
 ## 검증
 
 문서 또는 수집 코드를 변경한 뒤 가능한 검증은 다음과 같다.
 
 ```bash
-python -m py_compile anniversary/main.py
+python -m py_compile anniversary/main.py anniversary/config.py anniversary/parser.py anniversary/repository.py
 psql "$DATABASE_URL" -f anniversary/table.sql
-python anniversary/main.py
+python anniversary/main.py --apply-schema --year 2026 --month 06 --operation getHoliDeInfo
 ```
 
 로컬 PostgreSQL을 직접 쓰지 않는 환경에서는 최소한 SQL 문법과 Python 문법 확인 결과를 작업 결과에 남긴다.
