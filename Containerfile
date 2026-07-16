@@ -13,5 +13,6 @@ RUN python -m pip install --requirement requirements.txt
 
 COPY rss ./rss
 COPY anniversary ./anniversary
+COPY weather ./weather
 
 CMD ["python", "rss/main.py"]
