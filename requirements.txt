@@ -1,3 +1,4 @@
 asyncpg
 httpx
+openpyxl
 python-dotenv
